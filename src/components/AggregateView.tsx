@@ -87,7 +87,10 @@ function AggBar({ data, dataKey, title, color, unit }: AggBarProps) {
               border: "1px solid #2a2a3a",
               borderRadius: 6,
               fontSize: 12,
+              color: "#e2e8f0",
             }}
+            labelStyle={{ color: "#e2e8f0" }}
+            itemStyle={{ color: "#e2e8f0" }}
             formatter={(v: unknown) => [
               typeof v === "number" ? `${v.toFixed(2)} ${unit}` : "—",
               title,

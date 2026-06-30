@@ -54,7 +54,7 @@ const COLUMN_GROUP: Record<string, string> = {
 const DEFAULT_CHANNELS = [
   "Vehicle speed (km/h)",
   "Engine RPM (rpm)",
-  "Calculated instant fuel rate (L/h)",
+  "Calculated instant fuel consumption (km/L)",
   "Engine coolant temperature (℃)",
 ];
 
