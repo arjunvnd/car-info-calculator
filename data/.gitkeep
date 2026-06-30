@@ -1,0 +1,5 @@
+# Place your Torque Pro CSV exports here.
+
+# File naming: YYYY-MM-DD HH-MM-SS.csv (Torque Pro default format)
+
+# The app will auto-discover all .csv files in this folder via the GitHub API.
