@@ -153,7 +153,7 @@ function SingleChannelChart({
               borderRadius: 6,
               fontSize: 12,
             }}
-            labelFormatter={(t: number | string) =>
+            labelFormatter={(t) =>
               `⏱ ${formatTime(typeof t === "number" ? t : parseFloat(String(t)))}`
             }
             formatter={(v: unknown) => [
