@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useTripFiles, useTripData } from "./hooks/useTripData";
 import { SummaryCards } from "./components/SummaryCards";
 import { MultiChannelChart } from "./components/MultiChannelChart";
 import { AggregateView } from "./components/AggregateView";
-import type { TripFile } from "./types";
+import { parseTorqueCsv } from "./utils/parseTorqueCsv";
+import { computeMetrics } from "./utils/computeMetrics";
+import type { TripFile, TripSeries, TripMetrics } from "./types";
 import "./App.css";
 
 const IS_CONFIGURED =
@@ -52,16 +54,51 @@ function SetupGuide() {
   );
 }
 
+interface LocalData {
+  name: string;
+  series: TripSeries;
+  metrics: TripMetrics;
+}
+
 export default function App() {
   const { files, loading: filesLoading, error: filesError } = useTripFiles();
   const [selectedFile, setSelectedFile] = useState<TripFile | null>(null);
   const [activeTab, setActiveTab] = useState<"trip" | "compare">("trip");
+  const [localData, setLocalData] = useState<LocalData | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const {
-    series,
-    metrics,
+    series: githubSeries,
+    metrics: githubMetrics,
     loading: dataLoading,
     error: dataError,
   } = useTripData(selectedFile);
+
+  const series = localData?.series ?? githubSeries;
+  const metrics = localData?.metrics ?? githubMetrics;
+  const activeError = localError ?? dataError;
+
+  function handleLocalFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLocalError(null);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const text = ev.target?.result as string;
+        const s = parseTorqueCsv(text);
+        const m = computeMetrics(s);
+        setLocalData({ name: file.name, series: s, metrics: m });
+        setSelectedFile(null); // clear GitHub selection
+        setActiveTab("trip");
+      } catch {
+        setLocalError("Failed to parse CSV. Make sure it is a Torque Pro export.");
+      }
+    };
+    reader.readAsText(file);
+    // reset so same file can be re-selected
+    e.target.value = "";
+  }
 
   if (!IS_CONFIGURED) return <SetupGuide />;
 
@@ -86,6 +123,8 @@ export default function App() {
               onChange={(e) => {
                 const f = files.find((x) => x.name === e.target.value) ?? null;
                 setSelectedFile(f);
+                setLocalData(null);
+                setLocalError(null);
               }}
             >
               <option value="">— Select a trip —</option>
@@ -95,6 +134,35 @@ export default function App() {
                 </option>
               ))}
             </select>
+          )}
+        </div>
+        <div className="local-upload">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            style={{ display: "none" }}
+            onChange={handleLocalFile}
+          />
+          {localData ? (
+            <div className="local-badge">
+              <span>📁 {localData.name}</span>
+              <button
+                className="local-clear"
+                onClick={() => { setLocalData(null); setLocalError(null); }}
+                title="Clear local file"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <button
+              className="local-btn"
+              onClick={() => fileInputRef.current?.click()}
+              title="Load a CSV from your device without uploading to GitHub"
+            >
+              📁 Local CSV
+            </button>
           )}
         </div>
         <nav className="tab-nav">
@@ -119,12 +187,13 @@ export default function App() {
             {dataLoading && (
               <div className="loading-spinner">Loading trip data…</div>
             )}
-            {dataError && <div className="error-msg">⚠ {dataError}</div>}
-            {!selectedFile && !dataLoading && (
+            {activeError && <div className="error-msg">⚠ {activeError}</div>}
+            {!selectedFile && !localData && !dataLoading && (
               <div className="empty-state">
                 <div className="empty-icon">📊</div>
                 <p>
-                  Select a trip from the dropdown to view analysis and graphs.
+                  Select a trip from the dropdown, or load a CSV directly from
+                  your device using the <strong>📁 Local CSV</strong> button.
                 </p>
               </div>
             )}
